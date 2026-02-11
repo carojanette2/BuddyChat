@@ -1,47 +1,126 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Socket.IO chat</title>
     <style>
-      body { margin: 0; padding-bottom: 3rem; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+      body {
+        margin: 0;
+        padding-bottom: 3rem;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+      }
 
-      #form { background: rgba(0, 0, 0, 0.15); padding: 0.25rem; position: fixed; bottom: 0; left: 0; right: 0; display: flex; height: 3rem; box-sizing: border-box; backdrop-filter: blur(10px); }
-      #input { border: none; padding: 0 1rem; flex-grow: 1; border-radius: 2rem; margin: 0.25rem; }
-      #input:focus { outline: none; }
-      #form > button { background: #333; border: none; padding: 0 1rem; margin: 0.25rem; border-radius: 3px; outline: none; color: #fff; }
+      #form {
+        background: rgba(0, 0, 0, 0.15);
+        padding: 0.25rem;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        height: 3rem;
+        box-sizing: border-box;
+        backdrop-filter: blur(10px);
+      }
+      #input {
+        border: none;
+        padding: 0 1rem;
+        flex-grow: 1;
+        border-radius: 2rem;
+        margin: 0.25rem;
+      }
+      #input:focus {
+        outline: none;
+      }
+      #form > button {
+        background: #333;
+        border: none;
+        padding: 0 1rem;
+        margin: 0.25rem;
+        border-radius: 3px;
+        outline: none;
+        color: #fff;
+      }
 
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages > li { padding: 0.5rem 1rem; }
-      #messages > li:nth-child(odd) { background: #efefef; }
+      #messages {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+      }
+      #messages > li {
+        padding: 0.5rem 1rem;
+      }
+      #messages > li:nth-child(odd) {
+        background: #efefef;
+      }
     </style>
   </head>
   <body>
-    <ul id="messages"></ul>
-    <form id="form" action="">
-      <input id="input" autocomplete="off" /><button>Send</button>
-    </form>
     <script src="/socket.io/socket.io.js"></script>
-<script>
-  var socket = io();
+    <script>
+      function getLastUrlSegment(url_string) {
+        const url = new URL(url_string);
+        const pathname = url.pathname;
 
-  var messages = document.getElementById('messages');
-  var form = document.getElementById('form');
-  var input = document.getElementById('input');
+        // Split by '/' and filter out empty strings (which occur with trailing slashes)
+        const segments = pathname.split("/").filter(Boolean);
 
-  form.addEventListener('submit', function(e) {
-    e.preventDefault();
-    if (input.value) {
-      socket.emit('chat message', input.value);
-      input.value = '';
-    }
-  });
+        // Get the last element of the resulting array
+        return segments.length > 0 ? segments[segments.length - 1] : "";
+      }
+      let ACTIVE_CHAT = getLastUrlSegment(location.href);
 
-  socket.on('chat message', function(msg) {
-    var item = document.createElement('li');
-    item.textContent = msg;
-    messages.appendChild(item);
-    window.scrollTo(0, document.body.scrollHeight);
-  });
-</script>
+      function drawChatBox(num, type) {
+        return `
+        <a href="${num}" >${num}</a>
+        <div class="chat-boxes" id="box-${num}" style="display: ${type}">
+          <ul id="messages-${num}"></ul>
+          
+          <form id="form" action="">
+            <input id="input-${num}" autocomplete="off" /><button>Send</button>
+          </form>
+        </div>
+            `;
+      }
+
+      for (let i = 1; i < 4; i++) {
+        i == ACTIVE_CHAT
+          ? (document.body.innerHTML += drawChatBox(i, "block"))
+          : (document.body.innerHTML += drawChatBox(i, "none"));
+      }
+
+      var socket = io();
+      const room = window.location.pathname.slice(1); // "1", "2", or "3" chat-boxes
+      console.log(room, "room");
+      var messages = document.getElementById(`messages-${ACTIVE_CHAT}`);
+      var form = document.querySelectorAll("form");
+      form.forEach((sub_form) => {
+        sub_form.addEventListener("submit", function (e) {
+          e.preventDefault();
+          var input = document.getElementById(`input-${ACTIVE_CHAT}`);
+          console.log(input, input.value, "before");
+          if (input.value) {
+            console.log(input.value, "after");
+            socket.emit("chat-message", {
+              room: ACTIVE_CHAT,
+              message: input.value,
+            });
+            input.value = "";
+          }
+        });
+      });
+      // join room based on URL
+      console.log(room);
+      socket.emit("join-room", room);
+
+      socket.on("chat message", function (msg, id) {
+        console.log(msg.message, id, "logging");
+        var item = document.createElement("li");
+        item.textContent = msg.message;
+        messages.appendChild(item);
+        window.scrollTo(0, document.body.scrollHeight);
+      });
+    </script>
   </body>
 </html>
