@@ -1,7 +1,8 @@
-
 {
   "name": "BuddyChat",
   "version": "0.0.1",
   "description": "my first socket.io app",
-  "dependencies": {}
+  "dependencies": {
+    "socket.io": "^4.8.3"
+  }
 }
